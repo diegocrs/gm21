@@ -22,13 +22,7 @@ const App: React.FC = () => {
 
   // --- Helpers ---
   const isWeekUnlocked = (weekNum: number) => {
-    if (weekNum === 1) return true;
-
-    const previousWeekDays = WORKOUT_PLAN
-      .filter(d => d.week === weekNum - 1)
-      .map(d => d.id);
-
-    return previousWeekDays.every(dayId => progress.completedDays.includes(dayId));
+    return true;
   };
 
   const handleCompleteDay = (dayId: number) => {
