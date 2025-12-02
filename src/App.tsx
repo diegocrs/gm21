@@ -5,6 +5,7 @@ import LoginScreen from './components/LoginScreen';
 import SettingsScreen from './components/SettingsScreen';
 import BackgroundLiquid from './components/BackgroundLiquid';
 import Dashboard from './components/Dashboard';
+import PopupModal from './components/PopupModal';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 import { useProgress } from './hooks/useProgress';
@@ -14,11 +15,12 @@ const TOTAL_DAYS = 21;
 const App: React.FC = () => {
   const { user, loading, login, logout, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { progress, toggleExercise, completeDay, resetProgress } = useProgress(user);
+  const { progress, toggleExercise, completeDay, resetProgress, hasCompletedWorkoutToday } = useProgress(user);
 
   const [activeDayId, setActiveDayId] = useState<number | null>(null);
   const [activeWeek, setActiveWeek] = useState<number>(1);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
 
   // --- Helpers ---
   const isWeekUnlocked = (weekNum: number) => {
@@ -26,10 +28,24 @@ const App: React.FC = () => {
   };
 
   const handleCompleteDay = (dayId: number) => {
-    completeDay(dayId);
+    const success = completeDay(dayId);
+    if (!success) {
+      // Show popup if daily limit reached
+      setShowPopup(true);
+      return;
+    }
     setTimeout(() => {
       setActiveDayId(null);
     }, 1500);
+  };
+
+  const handleDayClick = (dayId: number) => {
+    // Check if user already completed a workout today
+    if (hasCompletedWorkoutToday() && !progress.completedDays.includes(dayId)) {
+      setShowPopup(true);
+      return;
+    }
+    setActiveDayId(dayId);
   };
 
   const handleLogout = () => {
@@ -101,20 +117,27 @@ const App: React.FC = () => {
 
   // 5. Dashboard View (Main)
   return (
-    <Dashboard
-      user={user}
-      theme={theme}
-      toggleTheme={toggleTheme}
-      onOpenSettings={() => setShowSettings(true)}
-      onLogout={handleLogout}
-      activeWeek={activeWeek}
-      setActiveWeek={setActiveWeek}
-      isWeekUnlocked={isWeekUnlocked}
-      currentWeekPlan={currentWeekPlan}
-      completedDays={progress.completedDays}
-      setActiveDayId={setActiveDayId}
-      percentage={percentage}
-    />
+    <>
+      <Dashboard
+        user={user}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        onOpenSettings={() => setShowSettings(true)}
+        onLogout={handleLogout}
+        activeWeek={activeWeek}
+        setActiveWeek={setActiveWeek}
+        isWeekUnlocked={isWeekUnlocked}
+        currentWeekPlan={currentWeekPlan}
+        completedDays={progress.completedDays}
+        setActiveDayId={handleDayClick}
+        percentage={percentage}
+      />
+      <PopupModal
+        isOpen={showPopup}
+        onClose={() => setShowPopup(false)}
+        message="Volte amanhã para continuar seu avanço"
+      />
+    </>
   );
 };
 

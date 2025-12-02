@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { UserProgress, UserData } from '../types';
 
-const EMPTY_PROGRESS: UserProgress = { completedDays: [], completedExercises: {} };
+const EMPTY_PROGRESS: UserProgress = { completedDays: [], completedExercises: {}, completionDates: {} };
 
 export const useProgress = (user: UserData | null) => {
     const [progress, setProgress] = useState<UserProgress>(EMPTY_PROGRESS);
@@ -40,13 +40,32 @@ export const useProgress = (user: UserData | null) => {
         }));
     };
 
-    const completeDay = (dayId: number) => {
+    const getTodayDate = (): string => {
+        const today = new Date();
+        return today.toISOString().split('T')[0]; // YYYY-MM-DD
+    };
+
+    const hasCompletedWorkoutToday = (): boolean => {
+        const today = getTodayDate();
+        return Object.values(progress.completionDates).some(date => date === today);
+    };
+
+    const completeDay = (dayId: number): boolean => {
+        // Check if already completed a workout today
+        if (hasCompletedWorkoutToday()) {
+            return false; // Cannot complete another workout today
+        }
+
         if (!progress.completedDays.includes(dayId)) {
+            const today = getTodayDate();
             setProgress(prev => ({
                 ...prev,
-                completedDays: [...prev.completedDays, dayId]
+                completedDays: [...prev.completedDays, dayId],
+                completionDates: { ...prev.completionDates, [dayId]: today }
             }));
+            return true;
         }
+        return true; // Already completed, but allow (edge case)
     };
 
     const resetProgress = () => {
@@ -55,5 +74,5 @@ export const useProgress = (user: UserData | null) => {
         localStorage.setItem(`gluteChallengeProgress_${user.email}`, JSON.stringify(EMPTY_PROGRESS));
     };
 
-    return { progress, toggleExercise, completeDay, resetProgress };
+    return { progress, toggleExercise, completeDay, resetProgress, hasCompletedWorkoutToday };
 };
